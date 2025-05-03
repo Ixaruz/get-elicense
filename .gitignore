@@ -1,0 +1,7 @@
+build/
+**/*.elf
+**/*.lst
+**/*.nacp
+**/*.nro
+
+.vscode/
