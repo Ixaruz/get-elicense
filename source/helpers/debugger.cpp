@@ -48,7 +48,7 @@ Debugger::Debugger(u64 title_id) {
   }
   if (m_pid < 80)
   {
-    printf("m_pid couldn't be determined properly (%08lx)", m_pid);
+    printf("m_pid couldn't be determined properly (%ld)", m_pid);
   }
 }
 
@@ -68,7 +68,7 @@ Result Debugger::attachToProcess() {
     m_rc = svcDebugActiveProcess(&m_debugHandle, m_pid);
     if (R_SUCCEEDED(m_rc))
     {
-      printf("Attached to process %08lX via svc.\n", m_pid);
+      printf("Attached to process %ld via svc.\n", m_pid);
       m_dmnt = false;
     }
     return m_rc;
