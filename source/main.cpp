@@ -11,9 +11,6 @@
 
 #include <debugger.hpp>
 
-//print debugging information to console (nxlink)
-#define DEBUG_PRINTF 1
-
 void print_u8_buffer(u8 *buffer, int size)
 {
     for (int i = 0; i < size; i++)
@@ -68,6 +65,53 @@ MemoryInfo query_find_main(Debugger &debugger, u64 start, u32 max_count)
     return meminfo;
 }
 
+struct Elicense {
+    u64 elicense_chunk1;
+    u64 elicense_chunk2;
+    u64 title_id; /* title id of the content */
+    u64 unk1; /* looks like another title id, but not sure which */
+    u64 license_holder_id;
+    u64 license_holder_id_again;
+    u64 unk2; /* always 0x7fffffffffffffff */
+    u64 unk3; /* always 0x7fffffffffffffff */
+    u64 unk4; /* always 0x0000000000000000 */
+    u64 unk5; /* some version string or timestamp(but not unix) or flags about the elicense? */
+    u64 unk6; /* always 0x0000000000000000 */
+    u64 title_id_base; /* title id of the main game */
+};
+
+Elicense getLicenseFromTitleId(u64 titleId)
+{
+    Elicense elicense;
+    // debug es service
+    Debugger debugger(0x0100000000000033);
+    if(R_FAILED(debugger.attachToProcess()))
+    {
+        printf("Failed to attach to es\n");
+        return elicense;
+    }
+    else
+    {
+        printf("Attached to es\n");
+    }
+
+    MemoryInfo mainMemInfo = query_find_main(debugger, 0, 1000);
+    u64 offsetElicenseCount = 0x11CE50; // subject to change with system updates
+    u64 offsetElicenses = 0x11CE60; // subject to change with system updates
+    u32 ElicenseCount = 0;
+    debugger.readMemory(&ElicenseCount, sizeof(ElicenseCount), mainMemInfo.addr + offsetElicenseCount);
+    for (u32 i = 0; i < ElicenseCount; i++)
+    {
+        debugger.readMemory(&elicense, sizeof(Elicense), mainMemInfo.addr + offsetElicenses + (sizeof(Elicense) * i));
+        if (elicense.title_id == titleId)
+        {
+            break;
+        }
+    }
+
+    return elicense;
+}
+
 int main(int argc, char **argv)
 {
     consoleInit(NULL);
@@ -82,25 +126,11 @@ int main(int argc, char **argv)
     PadState pad;
     padInitializeDefault(&pad);
 
-    // debug es service
-    Debugger debugger(0x0100000000000033);
-    if(R_FAILED(debugger.attachToProcess()))
-    {
-        printf("Failed to attach to es\n");
-        return -1;
-    }
-    else
-    {
-        printf("Attached to es\n");
-    }
+    // get elicense of Animal Crossing New Horizons
+    Elicense elicense = getLicenseFromTitleId(0x01006F8002326000);
 
-    MemoryInfo mainMemInfo = query_find_main(debugger, 0, 1000);
-
-    u8 buffer[0x10] = { 0 };
-    // printf("%08lx %08lx %08lx %08lx\n%08lx %08lx %08lx %08lx\n",
-    //     mainMemInfo.addr, mainMemInfo.size, mainMemInfo.type, mainMemInfo.attr, mainMemInfo.perm, mainMemInfo.ipc_refcount, mainMemInfo.device_refcount, mainMemInfo.padding);
-    debugger.readMemory(buffer, sizeof(buffer), mainMemInfo.addr + 0x11CE60);
-    print_u8_buffer(buffer, sizeof(buffer));
+    printf("elicense: %08lx%08lx\n", elicense.elicense_chunk1, elicense.elicense_chunk2);
+    printf("licensee: %08lx (verify %08lx)\n", elicense.license_holder_id, elicense.license_holder_id_again);
 
     // Main loop
     while(appletMainLoop())
