@@ -129,7 +129,8 @@ int main(int argc, char **argv)
     // get elicense of Animal Crossing New Horizons
     Elicense elicense = getLicenseFromTitleId(0x01006F8002326000);
 
-    printf("elicense: %08lx%08lx\n", elicense.elicense_chunk1, elicense.elicense_chunk2);
+    // has to be biteswapped for some reason
+    printf("elicense: %08lx%08lx\n", __builtin_bswap64(elicense.elicense_chunk1), __builtin_bswap64(elicense.elicense_chunk2));
     printf("licensee: %08lx (verify %08lx)\n", elicense.license_holder_id, elicense.license_holder_id_again);
 
     // Main loop
